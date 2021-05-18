@@ -1,36 +1,39 @@
 import os
+import wave
 
 import numpy as np
-import soundfile
 from pydub import AudioSegment
+from tinytag.tinytag import TinyTag
 
 
-def as_formats(path):
+def info(path, image=False):
+    return TinyTag.get(path, image=image)
+
+
+def load(path):
+    ext = os.path.splitext(path)[1].lower()
+
+    try:
+        return _loader[ext](path)
+    except KeyError:
+        raise IOError(f'Unrecognized file type: {ext}') from None
+
+
+def mp3_loader(path):
     segment = AudioSegment.from_file(path)
     audio = np.frombuffer(segment.raw_data, dtype='int16').reshape(-1, segment.channels)
     return audio, segment.frame_rate
 
 
-def sf_formats(path):
-    return soundfile.read(path, dtype='int16')
+def wav_loader(path):
+    with wave.open(path, 'r') as file:
+        audio = np.frombuffer(file.readframes(-1), dtype='int16').reshape(-1, file.getnchannels())
+        return audio, file.getframerate()
 
 
-def load_song(path):
-    ext = os.path.splitext(path)[1].lower()
-
-    try:
-        return loaders[ext](path)
-    except KeyError:
-        raise IOError(f'Unrecognized file type: {ext}') from None
-
-
-loaders = {
-    '.mp3': as_formats,
-    '.flv': as_formats,
-    '.ogg': as_formats,
-    '.wav': as_formats,
-    '.raw': as_formats
+_loader = {
+    '.mp3': mp3_loader,
+    '.wav': wav_loader
 }
-loaders.update({f'.{key.lower()}': sf_formats for key in soundfile.available_formats().keys()})
 
-extensions = list(loaders.keys())
+extensions = list(_loader.keys())
