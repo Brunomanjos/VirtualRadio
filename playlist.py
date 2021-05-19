@@ -1,8 +1,28 @@
+import json
 import os
 import random
+from dataclasses import dataclass, fields, field
 
 from song import Song
 from songloader import extensions
+
+
+@dataclass
+class PlaylistData:
+    _songs: dict[str, int] = field(default_factory=dict)
+    _paths: list[str] = field(default_factory=list)
+
+    @staticmethod
+    def get(playlist):
+        data = {}
+        for field in fields(PlaylistData):
+            data[field.name] = getattr(playlist, field.name)
+        return data
+
+    @staticmethod
+    def set(playlist, data):
+        for field in fields(PlaylistData):
+            setattr(playlist, field.name, data[field.name])
 
 
 class Playlist:
@@ -36,6 +56,31 @@ class Playlist:
     def get(self):
         return self._song
 
+    def save(self, output_path):
+        with open(output_path, 'w') as file:
+            json.dump(PlaylistData.get(self), file)
+
+    @staticmethod
+    def load(path):
+        with open(path, 'r') as file:
+            data = json.load(file)
+            playlist = Playlist([])
+            PlaylistData.set(playlist, data)
+            return playlist
+
+    def add_path(self, path):
+        if isinstance(path, str):
+            self._paths.append(path)
+        else:
+            self._paths.extend(path)
+
+    def remove_path(self, path):
+        if isinstance(path, str):
+            self._paths.remove(path)
+        else:
+            for directory in path:
+                self._paths.remove(directory)
+
     def _reload_songs(self):
         def get_songs(path):
             for root, _, songs in os.walk(path):
@@ -63,4 +108,4 @@ class Playlist:
 
     @property
     def paths(self):
-        return self._paths
+        return self._paths.copy()
