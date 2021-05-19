@@ -1,4 +1,4 @@
-import os
+from os.path import splitext, basename
 import wave
 
 import numpy as np
@@ -7,11 +7,16 @@ from tinytag.tinytag import TinyTag
 
 
 def info(path, image=False):
-    return TinyTag.get(path, image=image)
+    song_info = TinyTag.get(path, image=image)
+
+    if song_info.title is None:
+        song_info.title = splitext(basename(path))[0]
+
+    return song_info
 
 
 def load(path):
-    ext = os.path.splitext(path)[1].lower()
+    ext = splitext(path)[1].lower()
 
     try:
         return _loader[ext](path)
