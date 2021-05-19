@@ -1,9 +1,14 @@
+from threading import Lock
+
 import numpy as np
 import sounddevice
 
 import songloader
 
 CHUNK_SIZE = 1024
+
+playing_song = None
+player_lock = Lock()
 
 
 class Song:
@@ -35,6 +40,15 @@ class Song:
         self._song_data = None
 
     def play(self):
+        global playing_song
+
+        with player_lock:
+            if playing_song:
+                playing_song.stop()
+
+            playing_song = self
+
+        self.load()
         self._playing = True
 
         frames, channels = self._song_data.shape
